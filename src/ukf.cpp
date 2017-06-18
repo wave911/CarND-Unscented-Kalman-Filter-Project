@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 0.83;//30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 0.55;//30;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -58,7 +58,7 @@ UKF::UKF() {
 
   n_aug_ = 7;
 
-  lambda_ = 3-n_x_;
+  lambda_ = 3-n_aug_;
 
   weights_ = VectorXd(2 * n_aug_ + 1);
   double weight_0 = lambda_/(lambda_ + n_aug_);
@@ -71,11 +71,16 @@ UKF::UKF() {
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
   P_ = MatrixXd(n_x_, n_x_);
-  P_ <<   1, 0, 0, 0, 0,
-          0, 1, 0, 0, 0,
-          0, 0, 1, 0, 0,
-          0, 0, 0, 1, 0,
-          0, 0, 0, 0, 1;
+//  P_ <<   1, 0, 0, 0, 0,
+//          0, 1, 0, 0, 0,
+//          0, 0, 1, 0, 0,
+//          0, 0, 0, 1, 0,
+//          0, 0, 0, 0, 1;
+  P_ << 0.5 , 0   , 0  , 0  , 0,
+        0   , 0.5 , 0  , 0  , 0,
+        0   , 0   , 1  , 0  , 0,
+        0   , 0   , 0  , 0.5, 0,
+        0   , 0   , 0  , 0  , 0.5;
 }
 
 UKF::~UKF() {}
@@ -118,8 +123,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 				laser_data[1] = 0.000001;
 			x_ << laser_data[0],
 				  laser_data[1],
-				  1,
-				  M_PI,
+				  0,
+				  0,
 				  0;
 		}
 
@@ -129,6 +134,12 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	}
 
 	double dt = (meas_package.timestamp_ - previous_timestamp_) / 1000000.0;	//dt - expressed in seconds
+	while (dt > 0.1) {
+		const double dt_small = 0.05;
+		Prediction(dt_small);
+		dt -= dt_small;
+	}
+
 	previous_timestamp_ = meas_package.timestamp_;
 
 	Prediction(dt);
